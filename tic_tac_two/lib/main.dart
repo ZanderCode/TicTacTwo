@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
@@ -10,11 +12,17 @@ import 'package:tic_tac_two/view/GameCard.dart';
 import 'package:tic_tac_two/view/Menus/Pause.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebasemanager.initialize();
 
-  if (Platform.isWindows) {
+  await FirebaseManager.initialize();
+
+  // Make sure network is enabled
+  await FirebaseFirestore.instance.enableNetwork();
+
+  if (!kIsWeb && Platform.isWindows) {
     await windowManager.ensureInitialized();
     windowManager.setTitle('Tic Tac Two');
   }
@@ -48,17 +56,40 @@ class TicTacTwo extends StatefulWidget {
 }
 
 class AppScreen extends State<TicTacTwo> {
-  late final TicTacTwoGame game;
+  late GameBoard board;
+
+  String? firebaseValue;
 
   @override
   void initState() {
     super.initState();
-    game = TicTacTwoGame();
+    board = GameBoard();
+
+    getFirebaseValue().then((b) {
+      setState(() {
+        firebaseValue = b;
+      });
+    });
+  }
+
+  Future<String> getFirebaseValue() async {
+    FirebaseFirestore db = FirebaseFirestore.instance;
+    print(db.settings);
+    print(db.databaseId);
+    DocumentReference dr = db
+        .collection("accounts")
+        .doc("pU4DxQV1ojMnODrM7GiP");
+    DocumentSnapshot ds = await dr.get();
+    String displayName = (ds.data() as Map<String, dynamic>)["display_name"];
+    return await Future.value(displayName);
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(child: GameBoard());
+    return SingleChildScrollView(
+      child: Center(child: Text(firebaseValue ?? "")),
+    );
+    // return SingleChildScrollView(child: GameBoard());
   }
 }
 
@@ -99,6 +130,8 @@ class GameBoardState extends State<GameBoard> {
 }
 
 class TicTacTwoGame extends FlameGame with KeyboardEvents {
+  late TextComponent textComp;
+
   @override
   FutureOr<void> onLoad() {
     add(GameCard(Vector2(100, 100), Vector2(100, 100), text: "X", id: 0));
@@ -107,6 +140,9 @@ class TicTacTwoGame extends FlameGame with KeyboardEvents {
     add(GameCard(Vector2(100, 200), Vector2(100, 100), text: "0", id: 0));
     add(GameCard(Vector2(200, 200), Vector2(100, 100), text: "X", id: 0));
     add(GameCard(Vector2(300, 200), Vector2(100, 100), text: "0", id: 0));
+
+    textComp = TextComponent(text: "(Firebase value)", position: Vector2(0, 0));
+    add(textComp);
   }
 
   @override

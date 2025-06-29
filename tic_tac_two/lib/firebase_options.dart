@@ -17,6 +17,7 @@ import 'package:flutter/foundation.dart'
 class DefaultFirebaseOptions {
   static FirebaseOptions get currentPlatform {
     if (kIsWeb) {
+      print("WEB");
       return web;
     }
     switch (defaultTargetPlatform) {
@@ -40,6 +41,8 @@ class DefaultFirebaseOptions {
     }
   }
 
+  // Your web app's Firebase configuration
+
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: 'AIzaSyBtWIFNJDatVKzhra2kCBNj-NzJ1_5zn5k',
     appId: '1:500852408753:web:047da0af98c902739bbd90',
@@ -49,6 +52,8 @@ class DefaultFirebaseOptions {
     storageBucket: 'tictactwo-c1026.firebasestorage.app',
     measurementId: 'G-KVK9X1K6NW',
   );
+
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDNtUokof-dJjFp7cnbMyTLw3sVIsZu2OE',
@@ -85,4 +90,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'tictactwo-c1026.firebasestorage.app',
     measurementId: 'G-7QK5DPGRZN',
   );
+
 }
