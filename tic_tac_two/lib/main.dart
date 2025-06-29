@@ -5,12 +5,14 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tic_tac_two/controller/FirebaseManager.dart';
 import 'package:tic_tac_two/view/GameCard.dart';
 import 'package:tic_tac_two/view/Menus/Pause.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebasemanager.initialize();
 
   if (Platform.isWindows) {
     await windowManager.ensureInitialized();
