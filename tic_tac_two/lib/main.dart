@@ -1,6 +1,12 @@
+import 'dart:async';
 import 'dart:io';
 
+import 'package:flame/events.dart';
+import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:tic_tac_two/view/GameCard.dart';
+import 'package:tic_tac_two/view/Menus/Pause.dart';
 import 'package:window_manager/window_manager.dart';
 
 void main() async {
@@ -36,24 +42,89 @@ class TicTacTwo extends StatefulWidget {
   final String title;
 
   @override
-  State<TicTacTwo> createState() => MainGameLoop();
+  State<TicTacTwo> createState() => AppScreen();
 }
 
-class MainGameLoop extends State<TicTacTwo> {
+class AppScreen extends State<TicTacTwo> {
+  late final TicTacTwoGame game;
+
+  @override
+  void initState() {
+    super.initState();
+    game = TicTacTwoGame();
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        border: BoxBorder.all(width: 10, color: Colors.blue),
-      ),
+    return SingleChildScrollView(child: GameBoard());
+  }
+}
+
+class GameBoard extends StatefulWidget {
+  const GameBoard({super.key});
+
+  @override
+  State<GameBoard> createState() => GameBoardState();
+}
+
+class GameBoardState extends State<GameBoard> {
+  late final TicTacTwoGame game;
+
+  @override
+  void initState() {
+    super.initState();
+    game = TicTacTwoGame();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 300,
+      height: MediaQuery.of(context).size.height,
       child: Container(
         decoration: BoxDecoration(
-          border: BoxBorder.all(width: 10, color: Colors.red),
+          border: Border.all(width: 10, color: Colors.blue),
         ),
-        child: SingleChildScrollView(
-          child: Column(children: [Text("Play"), Text("Rules"), Text("Exit")]),
+        child: GameWidget(
+          game: game,
+          overlayBuilderMap: {
+            "pause": (context, game) => Center(child: Pause()),
+          },
         ),
       ),
     );
+  }
+}
+
+class TicTacTwoGame extends FlameGame with KeyboardEvents {
+  @override
+  FutureOr<void> onLoad() {
+    add(GameCard(Vector2(100, 100), Vector2(100, 100), text: "X", id: 0));
+    add(GameCard(Vector2(200, 100), Vector2(100, 100), text: "0", id: 0));
+    add(GameCard(Vector2(300, 100), Vector2(100, 100), text: "X", id: 0));
+    add(GameCard(Vector2(100, 200), Vector2(100, 100), text: "0", id: 0));
+    add(GameCard(Vector2(200, 200), Vector2(100, 100), text: "X", id: 0));
+    add(GameCard(Vector2(300, 200), Vector2(100, 100), text: "0", id: 0));
+  }
+
+  @override
+  KeyEventResult onKeyEvent(
+    KeyEvent event,
+    Set<LogicalKeyboardKey> keysPressed,
+  ) {
+    if (event is KeyDownEvent) {
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        if (overlays.isActive('pause')) {
+          overlays.remove('pause');
+          resumeEngine();
+        } else {
+          overlays.add('pause');
+          pauseEngine();
+        }
+        return KeyEventResult.handled;
+      }
+    }
+
+    return KeyEventResult.ignored;
   }
 }
