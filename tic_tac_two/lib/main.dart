@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:http/http.dart' as http;
+
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -26,7 +28,6 @@ void main() async {
 
   if (USE_EMULATORS) {
     Map<String, int> ports = await FirebaseManager.getEmulatorPorts();
-    print("Connecting to Firestore emulator on port ${ports['firestore']}");
     FirebaseFirestore.instance.useFirestoreEmulator(
       'localhost',
       ports["firestore"] ?? 8080,
@@ -77,7 +78,8 @@ class TicTacTwo extends StatefulWidget {
 class AppScreen extends State<TicTacTwo> {
   late GameBoard board;
 
-  String? firebaseValue;
+  String? firestoreValue;
+  String? firebaseFunctionValue;
 
   @override
   void initState() {
@@ -86,9 +88,29 @@ class AppScreen extends State<TicTacTwo> {
 
     getFirebaseValue().then((b) {
       setState(() {
-        firebaseValue = b;
+        firestoreValue = b;
       });
     });
+
+    getFunctionResult().then((b) {
+      setState(() {
+        firebaseFunctionValue = b;
+      });
+    });
+  }
+
+  Future<String> getFunctionResult() async {
+    final uri = Uri.parse(
+      'http://127.0.0.1:5001/tictactwo-c1026/us-central1/helloWorld',
+    );
+
+    final res = await http.get(uri);
+
+    if (res.statusCode == 200) {
+      return res.body;
+    } else {
+      throw Exception('Function failed: ${res.statusCode} ${res.body}');
+    }
   }
 
   Future<String> getFirebaseValue() async {
@@ -108,7 +130,12 @@ class AppScreen extends State<TicTacTwo> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: Center(child: Text(firebaseValue ?? "")),
+      child: Column(
+        children: [
+          Text(firestoreValue ?? ""),
+          Text(firebaseFunctionValue ?? ""),
+        ],
+      ),
     );
     // return SingleChildScrollView(child: GameBoard());
   }

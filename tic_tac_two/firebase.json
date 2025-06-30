@@ -36,7 +36,7 @@
       "port": 9099
     },
     "exportOnExit": true,
-    "import": "./emulator-data"
+    "import": "./emulator-data/basic-display-name-sample"
   },
   "flutter": {
     "platforms": {
