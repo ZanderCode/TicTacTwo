@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:firebase_auth/firebase_auth.dart';
@@ -76,26 +77,6 @@ class AppScreen extends State<TicTacTwo> {
         firestoreValue = b;
       });
     });
-
-    getFunctionResult().then((b) {
-      setState(() {
-        firebaseFunctionValue = b;
-      });
-    });
-  }
-
-  Future<String> getFunctionResult() async {
-    final uri = Uri.parse(
-      'http://127.0.0.1:5001/tictactwo-c1026/us-central1/helloWorld',
-    );
-
-    final res = await http.get(uri);
-
-    if (res.statusCode == 200) {
-      return res.body;
-    } else {
-      throw Exception('Function failed: ${res.statusCode} ${res.body}');
-    }
   }
 
   Future<String> getFirebaseValue() async {
