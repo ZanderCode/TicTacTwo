@@ -1,0 +1,64 @@
+{
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "firestore": {
+      "port": 8080
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true,
+    "auth": {
+      "port": 9099
+    },
+    "exportOnExit": true,
+    "import": "./emulator-data/basic-display-name-sample"
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "tictactwo-c1026",
+          "appId": "1:500852408753:android:a5d6731c32558dd99bbd90",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "tictactwo-c1026",
+          "configurations": {
+            "android": "1:500852408753:android:a5d6731c32558dd99bbd90",
+            "ios": "1:500852408753:ios:2e72f33052129f659bbd90",
+            "macos": "1:500852408753:ios:2e72f33052129f659bbd90",
+            "web": "1:500852408753:web:047da0af98c902739bbd90",
+            "windows": "1:500852408753:web:0120655024d901cf9bbd90"
+          }
+        }
+      }
+    }
+  }
+}
