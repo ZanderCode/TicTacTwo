@@ -1,7 +1,7 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flame/components.dart';
 import 'package:flame/events.dart';
 import 'package:flame/game.dart';
@@ -12,12 +12,31 @@ import 'package:tic_tac_two/view/GameCard.dart';
 import 'package:tic_tac_two/view/Menus/Pause.dart';
 import 'package:window_manager/window_manager.dart';
 
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+
+const bool USE_EMULATORS = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await FirebaseManager.initialize();
+
+  if (USE_EMULATORS) {
+    Map<String, int> ports = await FirebaseManager.getEmulatorPorts();
+    print("Connecting to Firestore emulator on port ${ports['firestore']}");
+    FirebaseFirestore.instance.useFirestoreEmulator(
+      'localhost',
+      ports["firestore"] ?? 8080,
+    );
+    FirebaseFunctions.instance.useFunctionsEmulator(
+      'localhost',
+      ports["functions"] ?? 5001,
+    );
+    FirebaseAuth.instance.useAuthEmulator('localhost', ports["auth"] ?? 9099);
+  }
 
   // Make sure network is enabled
   await FirebaseFirestore.instance.enableNetwork();
@@ -74,13 +93,15 @@ class AppScreen extends State<TicTacTwo> {
 
   Future<String> getFirebaseValue() async {
     FirebaseFirestore db = FirebaseFirestore.instance;
-    print(db.settings);
-    print(db.databaseId);
     DocumentReference dr = db
         .collection("accounts")
-        .doc("pU4DxQV1ojMnODrM7GiP");
+        .doc("pY1Q5sD3qMTEeFHRm9ui");
     DocumentSnapshot ds = await dr.get();
+    print("Doc exists: ${ds.exists}");
+    print("Doc data: ${ds.data()}");
+
     String displayName = (ds.data() as Map<String, dynamic>)["display_name"];
+
     return await Future.value(displayName);
   }
 
