@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 
 import 'package:flame/components.dart';
@@ -9,37 +10,22 @@ import 'package:flame/events.dart';
 import 'package:flame/game.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:tic_tac_two/controller/AuthManager.dart';
 import 'package:tic_tac_two/controller/FirebaseManager.dart';
 import 'package:tic_tac_two/view/GameCard.dart';
 import 'package:tic_tac_two/view/Menus/Pause.dart';
 import 'package:window_manager/window_manager.dart';
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
-
-const bool USE_EMULATORS = true;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   await FirebaseManager.initialize();
 
-  if (USE_EMULATORS) {
-    Map<String, int> ports = await FirebaseManager.getEmulatorPorts();
-    FirebaseFirestore.instance.useFirestoreEmulator(
-      'localhost',
-      ports["firestore"] ?? 8080,
-    );
-    FirebaseFunctions.instance.useFunctionsEmulator(
-      'localhost',
-      ports["functions"] ?? 5001,
-    );
-    FirebaseAuth.instance.useAuthEmulator('localhost', ports["auth"] ?? 9099);
-  }
+  await FirebaseManager.useEmulators(true);
 
-  // Make sure network is enabled
   await FirebaseFirestore.instance.enableNetwork();
 
   if (!kIsWeb && Platform.isWindows) {
@@ -47,11 +33,11 @@ void main() async {
     windowManager.setTitle('Tic Tac Two');
   }
 
-  runApp(const MyApp());
+  runApp(const App());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+class App extends StatelessWidget {
+  const App({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -91,26 +77,6 @@ class AppScreen extends State<TicTacTwo> {
         firestoreValue = b;
       });
     });
-
-    getFunctionResult().then((b) {
-      setState(() {
-        firebaseFunctionValue = b;
-      });
-    });
-  }
-
-  Future<String> getFunctionResult() async {
-    final uri = Uri.parse(
-      'http://127.0.0.1:5001/tictactwo-c1026/us-central1/helloWorld',
-    );
-
-    final res = await http.get(uri);
-
-    if (res.statusCode == 200) {
-      return res.body;
-    } else {
-      throw Exception('Function failed: ${res.statusCode} ${res.body}');
-    }
   }
 
   Future<String> getFirebaseValue() async {
@@ -134,6 +100,16 @@ class AppScreen extends State<TicTacTwo> {
         children: [
           Text(firestoreValue ?? ""),
           Text(firebaseFunctionValue ?? ""),
+          MaterialButton(
+            child: Text("Sign in"),
+            onPressed: () {
+              AuthManager.useGoogleSignIn().then((e) {
+                print(
+                  "User after login: ${FirebaseAuth.instance.currentUser!.uid}",
+                );
+              });
+            },
+          ),
         ],
       ),
     );

@@ -1,7 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_functions/cloud_functions.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import '../firebase_options.dart';
 
 class FirebaseManager {
@@ -13,7 +17,32 @@ class FirebaseManager {
     );
   }
 
+  static Future<void> useEmulators(bool useEnumulators) async {
+    if (useEnumulators) {
+      Map<String, int> ports = await FirebaseManager.getEmulatorPorts();
+
+      FirebaseFirestore.instance.useFirestoreEmulator(
+        'localhost',
+        ports["firestore"] ?? 8080,
+      );
+      FirebaseFunctions.instance.useFunctionsEmulator(
+        'localhost',
+        ports["functions"] ?? 5001,
+      );
+      FirebaseAuth.instance.useAuthEmulator('localhost', ports["auth"] ?? 9099);
+    }
+  }
+
   static Future<Map<String, int>> getEmulatorPorts() async {
+    if (kIsWeb) {
+      final ports = <String, int>{};
+      ports.putIfAbsent("firestore", () => 8080);
+      ports.putIfAbsent("functions", () => 5001);
+      ports.putIfAbsent("auth", () => 9099);
+
+      return ports;
+    }
+
     final file = File('firebase.json');
     final contents = await file.readAsString();
     final jsonData = jsonDecode(contents);
