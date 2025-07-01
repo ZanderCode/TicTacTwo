@@ -71,12 +71,6 @@ class AppScreen extends State<TicTacTwo> {
   void initState() {
     super.initState();
     board = GameBoard();
-
-    getFirebaseValue().then((b) {
-      setState(() {
-        firestoreValue = b;
-      });
-    });
   }
 
   Future<String> getFirebaseValue() async {
@@ -99,7 +93,16 @@ class AppScreen extends State<TicTacTwo> {
       child: Column(
         children: [
           Text(firestoreValue ?? ""),
-          Text(firebaseFunctionValue ?? ""),
+          MaterialButton(
+            child: Text("Get Data"),
+            onPressed: () {
+              getFirebaseValue().then((b) {
+                setState(() {
+                  firestoreValue = b;
+                });
+              });
+            },
+          ),
           MaterialButton(
             child: Text("Sign in"),
             onPressed: () {
@@ -107,6 +110,16 @@ class AppScreen extends State<TicTacTwo> {
                 print(
                   "User after login: ${FirebaseAuth.instance.currentUser!.uid}",
                 );
+              });
+            },
+          ),
+          MaterialButton(
+            child: Text("Sign out"),
+            onPressed: () {
+              FirebaseAuth.instance.signOut().then((e) {
+                setState(() {
+                  firestoreValue = "";
+                });
               });
             },
           ),
