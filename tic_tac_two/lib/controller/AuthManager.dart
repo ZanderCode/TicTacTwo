@@ -1,13 +1,15 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as html;
 
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 
-import 'package:http/http.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+
+import 'package:universal_html/html.dart' hide Platform, HttpRequest;
+import 'package:window_manager/window_manager.dart';
 
 class AuthManager {
   static Future<(bool, UserCredential?)> useEmailLogin() async {
@@ -30,26 +32,15 @@ class AuthManager {
     UserCredential? cred;
 
     if (kIsWeb) {
-      GoogleAuthProvider googleProvider = GoogleAuthProvider();
-      googleProvider.addScope("email");
-      cred = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      return await _loginWeb();
     } else if (Platform.isWindows) {
-      // OAuthCredential? oAuthCred = await _loginWindowsDesktop();
-      // if (oAuthCred != null) {
-      //   cred = await FirebaseAuth.instance.signInWithCredential(oAuthCred);
-      // }
-      // String? token = await _getOAuthToken();
-      // if (token != null) {
-      //   FirebaseAuth.instance.signInWithCustomToken(token);
-      // }
-
       return await _loginWindowsDesktop();
     }
 
     return Future.value((false, cred));
   }
 
-  static void _lauchAuthInBrowser(String url) async {
+  static Future<void> _lauchAuthInBrowser(String url) async {
     print(url);
     await canLaunchUrl(Uri.parse(url))
         ? await launchUrl(Uri.parse(url))
@@ -58,8 +49,9 @@ class AuthManager {
 
   static Future<Map<String, String>> _getOAuthToken(
     String fromCode,
-    int fromPort,
-  ) async {
+    int fromPort, {
+    String additionalPath = "",
+  }) async {
     final uri = Uri.parse(
       'http://127.0.0.1:5001/tictactwo-c1026/us-central1/getTokenData',
     );
@@ -69,7 +61,7 @@ class AuthManager {
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'code': fromCode,
-        'redirectUri': 'http://localhost:$fromPort',
+        'redirectUri': 'http://localhost:$fromPort$additionalPath',
       }),
     );
 
@@ -88,7 +80,7 @@ class AuthManager {
   static Future<(bool, UserCredential?)> _loginWindowsDesktop() async {
     UserCredential? cred;
     int port = await getFreePort();
-    launchGoogleLogin(port);
+    await launchGoogleLogin(port);
     String? code = await listenForCode(port);
     if (code != null) {
       Map<String, String> map = await _getOAuthToken(code, port);
@@ -128,6 +120,76 @@ class AuthManager {
     return Future.value((false, cred));
   }
 
+  static Future<(bool, UserCredential?)> _loginWeb() async {
+    UserCredential? cred;
+    await launchGoogleLogin(8080, additionalPath: "/oauth-redirect.html");
+
+    String? code = await waitForAuthCode() ?? "";
+
+    print("this is the code: " + code);
+
+    Map<String, String> map = await _getOAuthToken(
+      code,
+      8080,
+      additionalPath: "/oauth-redirect.html",
+    );
+
+    //removeAuthCode();
+
+    if (map["firebaseToken"] != null) {
+      cred = await FirebaseAuth.instance.signInWithCustomToken(
+        map["firebaseToken"] ?? "",
+      );
+
+      final googleIdToken = map['googleIdToken']!;
+      final googleAccessToken = map['googleAccessToken']!;
+
+      final googleCredential = GoogleAuthProvider.credential(
+        idToken: googleIdToken,
+        accessToken: googleAccessToken,
+      );
+      try {
+        await FirebaseAuth.instance.currentUser?.linkWithCredential(
+          googleCredential,
+        );
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'provider-already-linked') {
+          print('The provider is already linked to the user.');
+        } else if (e.code == 'credential-already-in-use') {
+          print('The account corresponding to the credential already exists.');
+          // You might want to sign in with credential instead in this case.
+        } else {
+          print('Error linking credential: $e');
+        }
+      }
+
+      return Future.value((true, cred));
+    }
+
+    return Future.value((false, cred));
+  }
+
+  static Future<String?> waitForAuthCode({
+    Duration timeout = const Duration(seconds: 60),
+  }) async {
+    const pollInterval = Duration(milliseconds: 500);
+    final stopwatch = Stopwatch()..start();
+
+    while (stopwatch.elapsed < timeout) {
+      final code = getAuthCode();
+      if (code != null) {
+        removeAuthCode();
+        return code;
+      }
+      await Future.delayed(pollInterval);
+    }
+
+    return null; // Timed out
+  }
+
+  static String? getAuthCode() => window.localStorage['auth_code'];
+  static void removeAuthCode() => window.localStorage.remove('auth_code');
+
   static Future<String?> listenForCode(int port) async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, port);
     print('Listening for OAuth redirect on http://localhost:$port');
@@ -165,10 +227,13 @@ class AuthManager {
     return port;
   }
 
-  static void launchGoogleLogin(int redirectPort) {
+  static Future<void> launchGoogleLogin(
+    int redirectPort, {
+    String additionalPath = "",
+  }) async {
     final clientId =
         '500852408753-v5dcit0cit5ptb2699ei1b0bi8f3jcvq.apps.googleusercontent.com';
-    final redirectUri = 'http://localhost:$redirectPort';
+    final redirectUri = 'http://localhost:$redirectPort$additionalPath';
     final scopes = 'email profile openid';
 
     final url = Uri.https('accounts.google.com', '/o/oauth2/v2/auth', {
@@ -180,6 +245,6 @@ class AuthManager {
       'prompt': 'consent',
     }).toString();
 
-    _lauchAuthInBrowser(url);
+    await _lauchAuthInBrowser(url);
   }
 }

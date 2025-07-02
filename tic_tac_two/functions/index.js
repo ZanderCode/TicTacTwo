@@ -42,6 +42,11 @@ exports.getTokenData = onRequest(async (request, response) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   const clientSecret =  process.env.GOOGLE_CLIENT_SECRET;
 
+  logger.info("code:", code);
+  logger.info("clientid:", clientId);
+  logger.info("clientsecret:", clientSecret);
+  logger.info("redirect:", redirectUri);
+
   const tokenRes = await axios.post("https://oauth2.googleapis.com/token", null, {
     params: {
       code,
